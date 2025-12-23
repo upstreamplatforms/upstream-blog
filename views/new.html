@@ -1,0 +1,338 @@
+<!doctype html>
+<html lang="en" class="light">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <link rel="icon" type="image/x-icon" href="/static/favicon.png" />
+        <title>Upstream Utopia</title>
+
+        <!-- Tailwind CSS -->
+        <!--<script src="https://cdn.tailwindcss.com"></script>-->
+        <script src="/static/tailwind.js"></script>
+
+        <!-- Tailwind Config for Dark Mode -->
+        <script>
+            tailwind.config = {
+                darkMode: "class",
+                theme: {
+                    extend: {
+                        fontFamily: {
+                            sans: ["Inter", "sans-serif"],
+                            serif: ["Playfair Display", "serif"],
+                        },
+                        colors: {
+                            primary: {
+                                50: "#f9fafb",
+                                100: "#f3f4f6",
+                                900: "#111827",
+                            },
+                        },
+                    },
+                },
+            };
+        </script>
+
+        <!-- Google Fonts -->
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+        <link
+            href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Playfair+Display:ital,wght@0,600;1,600&display=swap"
+            rel="stylesheet"
+        />
+
+        <!-- Phosphor Icons -->
+        <script src="https://unpkg.com/@phosphor-icons/web"></script>
+
+        <style>
+            body {
+                font-family: "Inter", sans-serif;
+                transition:
+                    background-color 0.3s ease,
+                    color 0.3s ease;
+            }
+            h1,
+            h2,
+            h3,
+            .serif {
+                font-family: "Playfair Display", serif;
+            }
+            .post-card {
+                transition: all 0.3s ease;
+            }
+            .post-card:hover {
+                transform: translateY(-4px);
+            }
+            /* Custom scrollbar for webkit */
+            ::-webkit-scrollbar {
+                width: 8px;
+            }
+            ::-webkit-scrollbar-track {
+                background: transparent;
+            }
+            ::-webkit-scrollbar-thumb {
+                background: #cbd5e1;
+                border-radius: 4px;
+            }
+            .dark ::-webkit-scrollbar-thumb {
+                background: #475569;
+            }
+        </style>
+    </head>
+    <body
+        class="bg-primary-50 text-gray-900 dark:bg-gray-950 dark:text-gray-100 min-h-screen flex flex-col"
+    >
+        <script>
+          let tempTheme = localStorage.getItem("theme") || "light";
+          let tempHtml = document.documentElement;
+
+          if (tempTheme === "dark") {
+            tempHtml.classList.add("dark");
+          } else {
+            tempHtml.classList.remove("dark");
+          }
+        </script>
+        <!-- Header / Navigation -->
+        <nav
+            class="sticky top-0 z-50 backdrop-blur-md bg-white/70 dark:bg-gray-950/70 border-b border-gray-200 dark:border-gray-800 transition-colors duration-300"
+        >
+            <div
+                class="max-w-5xl mx-auto px-6 h-20 flex items-center justify-between"
+            >
+                <!-- Logo -->
+                <a
+                    href="/"
+                    class="text-2xl font-bold tracking-tight flex items-center gap-2"
+                >
+                    <i
+                        class="ph-fill ph-asterisk-simple text-indigo-600 dark:text-indigo-400"
+                    ></i>
+                    <span>Upstream Utopia</span>
+                </a>
+
+                <!-- Desktop Menu -->
+                <div
+                    class="hidden md:flex items-center gap-8 text-sm font-medium text-gray-600 dark:text-gray-400"
+                >
+
+                    <div
+                        class="w-px h-4 bg-gray-300 dark:bg-gray-700 mx-2"
+                    ></div>
+
+                    <!-- Theme Toggle Button -->
+                    <button
+                        id="theme-toggle"
+                        class="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                        aria-label="Toggle Dark Mode"
+                    >
+                        <i id="theme-icon" class="ph ph-moon text-xl"></i>
+                    </button>
+                </div>
+
+                <!-- Mobile Menu Button -->
+                <div class="flex items-center gap-4 md:hidden">
+                    <button
+                        id="theme-toggle-mobile"
+                        class="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+                    >
+                        <i
+                            id="theme-icon-mobile"
+                            class="ph ph-moon text-xl"
+                        ></i>
+                    </button>
+                    <button class="text-2xl">
+                        <i class="ph ph-list"></i>
+                    </button>
+                </div>
+            </div>
+        </nav>
+
+        <!-- Main Content -->
+        <main class="flex-grow w-full max-w-5xl mx-auto px-6 py-7" style="overflow-y: auto;">
+            <!-- Include stylesheet -->
+            <!--<link
+                href="https://cdn.jsdelivr.net/npm/quill@2.0.3/dist/quill.snow.css"
+                rel="stylesheet"
+            />-->
+
+            <div style="height: calc(100vh - 420px);">
+
+              <div class="flex">
+                <input id="titleInput" autocomplete="off" autofocus class="w-full mb-2 p-3 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-black text-gray-900 dark:text-gray-100 placeholder-gray-500 focus:ring-2 focus:ring-indigo-500 outline-none transition-all duration-200" placeholder="Title..." ></input>
+
+                <input id="categoryInput" type="text" list="categories" placeholder="Category..." class="w-[200px] ml-2 mb-2 p-3 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-black text-gray-900 dark:text-gray-100 placeholder-gray-500 focus:ring-2 focus:ring-indigo-500 outline-none transition-all duration-200" />
+                <datalist id="categories">
+                  <option>General</option>
+                  <option>History</option>
+                  <option>Tech</option>
+                  <option>Society</option>
+                  <option>Civilization</option>
+                  <option>Nature</option>
+                  <option>Philosophy</option>
+                  <option>Living</option>
+                </datalist>
+              </div>
+
+              <link href="/static/quill.css" rel="stylesheet" />
+
+              <!-- Create the editor container -->
+              <div id="editor" class="min-h-[100px] focus:ring-2 focus:ring-indigo-500">
+              </div>
+
+              <div class="flex justify-end">
+                <!--<button class="mr-2 mt-2 px-4 py-2 rounded-full bg-gray-900 text-white dark:bg-gray-300  dark:text-gray-900 text-sm font-medium transition-transform hover:scale-105" onclick="saveDraft()">Draft</button>-->
+                <button class="mt-2 px-4 py-2 rounded-full bg-gray-900 text-white dark:bg-white dark:text-gray-900 text-sm font-medium transition-transform hover:scale-105" onclick="submit()">Submit</button>
+              </div>
+            </div>
+
+            <!-- Include the Quill library -->
+            <script src="/static/quill.js"></script>
+            <!--<script src="https://cdn.jsdelivr.net/npm/quill@2.0.3/dist/quill.js"></script>-->
+
+            <!-- Initialize Quill editor -->
+            <script>
+                const titleInput = document.getElementById("titleInput");
+                const categoryInput = document.getElementById("categoryInput");
+                const quill = new Quill("#editor", {
+                    theme: "snow",
+                });
+
+                let draftContent = localStorage.getItem("content_draft");
+                if (draftContent) {
+                  quill.setContents(quill.clipboard.convert({html:draftContent}), 'silent')
+                }
+
+                function submit() {
+
+                    let postContent = quill.getSemanticHTML();
+                    let tmp = document.createElement('div');
+                    tmp.innerHTML = postContent;
+                    let excerpt = tmp.textContent || tmp.innerText || '';
+                    if (excerpt.length > 180) excerpt = excerpt.substring(0, 180);
+                    excerpt += "...";
+
+                    localStorage.removeItem("content_draft");
+
+                    fetch("/posts", {
+                      method: "POST",
+                      body: JSON.stringify({
+                        title: titleInput.value,
+                        category: categoryInput.value,
+                        excerpt: excerpt,
+                        tags: [],
+                        content: quill.getSemanticHTML()
+                      })
+                    }).then(() => {
+                      window.location.href = "/";
+                    });
+                }
+
+                quill.on('text-change', (delta, oldDelta, source) => {
+                  if (source == 'user') {
+                    saveDraft();
+                  }
+                });
+
+                function saveDraft() {
+                  let content = quill.getSemanticHTML();
+                  localStorage.setItem("content_draft", content);
+                }
+            </script>
+        </main>
+
+        <!-- Footer -->
+        <footer
+          class="border-t border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-950 py-12 transition-colors duration-300"
+        >
+          <div
+            class="max-w-5xl mx-auto px-6 flex flex-col md:flex-row justify-between items-center gap-6"
+          >
+            <div class="text-center md:text-left">
+              <a
+                href="/"
+                class="text-xl font-bold tracking-tight flex items-center justify-center md:justify-start gap-2 mb-2"
+              >
+                <i
+                  class="ph-fill ph-asterisk-simple text-indigo-600 dark:text-indigo-400"
+                ></i>
+                <span>Upstream Utopia.</span>
+              </a>
+              <!--<p class="text-sm text-gray-500 dark:text-gray-400">
+                © Upstream. Crafted with duplicity.
+              </p>-->
+            </div>
+
+            <div class="flex gap-6 text-gray-500 dark:text-gray-400">
+              <!--<a
+                href="#"
+                class="hover:text-indigo-600 dark:hover:text-white transition-colors"
+                ><i class="ph ph-twitter-logo text-xl"></i
+              ></a>-->
+              <a
+                href="https://github.com/upstreamplatforms/upstream-blog"
+                class="hover:text-indigo-600 dark:hover:text-white transition-colors"
+                ><i class="ph ph-github-logo text-xl"></i
+              ></a>
+              <!--<a
+                href="#"
+                class="hover:text-indigo-600 dark:hover:text-white transition-colors"
+                ><i class="ph ph-linkedin-logo text-xl"></i
+              ></a>-->
+            </div>
+          </div>
+        </footer>
+
+        <!-- Application Logic -->
+        <script>
+
+            // --- State Management ---
+            const state = {
+                theme: localStorage.getItem("theme") || "light",
+            };
+
+            // --- DOM Elements ---
+            const themeToggleBtn = document.getElementById("theme-toggle");
+            const themeIcon = document.getElementById("theme-icon");
+            const themeToggleBtnMobile = document.getElementById(
+                "theme-toggle-mobile",
+            );
+            const themeIconMobile =
+                document.getElementById("theme-icon-mobile");
+
+            // --- Logic ---
+
+            function init() {
+                applyTheme(state.theme);
+
+                // Event Listeners
+                themeToggleBtn.addEventListener("click", toggleTheme);
+                themeToggleBtnMobile.addEventListener("click", toggleTheme);
+            }
+
+            // Theme Handling
+            function toggleTheme() {
+                state.theme = state.theme === "light" ? "dark" : "light";
+                localStorage.setItem("theme", state.theme);
+                applyTheme(state.theme);
+            }
+
+            function applyTheme(theme) {
+                const html = document.documentElement;
+                const iconClass = theme === "light" ? "ph-moon" : "ph-sun";
+
+                if (theme === "dark") {
+                    html.classList.add("dark");
+                } else {
+                    html.classList.remove("dark");
+                }
+
+                // Update icons
+                [themeIcon, themeIconMobile].forEach((icon) => {
+                    icon.className = `ph ${iconClass} text-xl`;
+                });
+            }
+
+            // Run
+            document.addEventListener("DOMContentLoaded", init);
+        </script>
+    </body>
+</html>

@@ -1,0 +1,671 @@
+<!doctype html>
+<html lang="en" class="light">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Upstream Utopia</title>
+    <link rel="icon" type="image/x-icon" href="/static/favicon.png" />
+    <!-- Tailwind CSS -->
+    <!--<script src="https://cdn.tailwindcss.com"></script>-->
+    <script src="/static/tailwind.js"></script>
+
+    <!-- Tailwind Config for Dark Mode -->
+    <script>
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            fontFamily: {
+              sans: ["Inter", "sans-serif"],
+              serif: ["Playfair Display", "serif"],
+            },
+            colors: {
+              primary: {
+                50: "#f9fafb",
+                100: "#f3f4f6",
+                900: "#111827",
+              },
+            },
+          },
+        },
+      };
+    </script>
+
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Playfair+Display:ital,wght@0,600;1,600&display=swap"
+      rel="stylesheet"
+    />
+    <script src="https://www.gstatic.com/firebasejs/8.0/firebase.js"></script>
+    <!-- Phosphor Icons -->
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+
+    <style>
+      body {
+        font-family: "Inter", sans-serif;
+        transition:
+          background-color 0.3s ease,
+          color 0.3s ease;
+      }
+      h1,
+      h2,
+      h3,
+      .serif {
+        font-family: "Playfair Display", serif;
+      }
+      .post-card {
+        transition: all 0.3s ease;
+      }
+      .post-card:hover {
+        transform: translateY(-4px);
+      }
+      /* Custom scrollbar for webkit */
+      ::-webkit-scrollbar {
+        width: 8px;
+      }
+      ::-webkit-scrollbar-track {
+        background: transparent;
+      }
+      ::-webkit-scrollbar-thumb {
+        background: #cbd5e1;
+        border-radius: 4px;
+      }
+      .dark ::-webkit-scrollbar-thumb {
+        background: #475569;
+      }
+    </style>
+  </head>
+  <body
+    class="bg-primary-50 text-gray-900 dark:bg-gray-950 dark:text-gray-100 min-h-screen flex flex-col"
+  >
+    <script>
+      let tempTheme = localStorage.getItem("theme") || "light";
+      let tempHtml = document.documentElement;
+
+      if (tempTheme === "dark") {
+        tempHtml.classList.add("dark");
+      } else {
+        tempHtml.classList.remove("dark");
+      }
+    </script>
+
+    <!-- Header / Navigation -->
+    <nav
+      class="sticky top-0 z-50 backdrop-blur-md bg-white/70 dark:bg-gray-950/70 border-b border-gray-200 dark:border-gray-800 transition-colors duration-300"
+    >
+      <div
+        class="max-w-5xl mx-auto px-6 h-20 flex items-center justify-between"
+      >
+        <!-- Logo -->
+        <a
+          href="/"
+          class="text-2xl font-bold tracking-tight flex items-center gap-2"
+        >
+          <i
+            class="ph-fill ph-asterisk-simple text-indigo-600 dark:text-indigo-400"
+          ></i>
+          <span>Upstream Utopia</span>
+        </a>
+
+        <!-- Desktop Menu -->
+        <div
+          class="hidden md:flex items-center gap-8 text-sm font-medium text-gray-600 dark:text-gray-400"
+        >
+          <a
+            id="signInButton"
+            onclick="signInWithGoogle()"
+            class="hover:text-indigo-600 dark:hover:text-white transition-colors cursor-pointer"
+            >Sign In</a
+          >
+
+          <a
+            id="newPostButton"
+            href="/new"
+            class="hover:text-indigo-600 dark:hover:text-white transition-colors cursor-pointer hidden"
+            >Post</a
+          >
+
+          <a
+            id="rssButton"
+            href="/rss"
+            class="hover:text-indigo-600 dark:hover:text-white transition-colors cursor-pointer"
+            >RSS</a
+          >
+
+          <a
+            id="signOutButton"
+            onclick="signOut()"
+            class="hover:text-indigo-600 dark:hover:text-white transition-colors cursor-pointer hidden"
+            >Sign Out</a
+          >
+
+          <!--<a
+            href="#"
+            class="hover:text-indigo-600 dark:hover:text-white transition-colors"
+            >About</a
+          >
+          <a
+            href="#"
+            class="hover:text-indigo-600 dark:hover:text-white transition-colors"
+            >Newsletter</a
+          >-->
+
+          <div class="w-px h-4 bg-gray-300 dark:bg-gray-700 mx-2"></div>
+
+          <!-- Theme Toggle Button -->
+          <button
+            id="theme-toggle"
+            class="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            aria-label="Toggle Dark Mode"
+          >
+            <i id="theme-icon" class="ph ph-moon text-xl"></i>
+          </button>
+        </div>
+
+        <!-- Mobile Menu Button -->
+        <div class="flex items-center gap-4 md:hidden">
+          <button
+            id="theme-toggle-mobile"
+            class="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+          >
+            <i id="theme-icon-mobile" class="ph ph-moon text-xl"></i>
+          </button>
+          <button class="text-2xl">
+            <i class="ph ph-list"></i>
+          </button>
+        </div>
+      </div>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="flex-grow w-full max-w-5xl mx-auto px-6 py-12 md:py-20">
+      <!-- Hero Section -->
+      <header class="mb-20 text-center max-w-2xl mx-auto">
+        <span
+          class="text-indigo-600 dark:text-indigo-400 font-medium tracking-wider text-sm uppercase mb-4 block"
+          >One Day at a Time</span
+        >
+        <h1
+          class="text-4xl md:text-6xl font-bold mb-6 leading-tight text-gray-900 dark:text-white"
+        >
+          Exploring <br />
+          <span class="italic text-gray-500 dark:text-gray-400"
+            >ideas & history.</span
+          >
+        </h1>
+        <p class="text-lg text-gray-600 dark:text-gray-400 leading-relaxed">
+          Daily thoughts on modernity, classicism, & technology.
+        </p>
+      </header>
+
+      <!-- Categories Filter (Visual only for demo) -->
+      <!--<div class="flex flex-wrap justify-center gap-4 mb-16">
+        <button
+          class="px-4 py-2 rounded-full bg-gray-900 text-white dark:bg-white dark:text-gray-900 text-sm font-medium transition-transform hover:scale-105"
+        >
+          All
+        </button>
+        <button
+          class="px-4 py-2 rounded-full bg-gray-200 dark:bg-gray-800 text-gray-600 dark:text-gray-300 text-sm font-medium hover:bg-gray-300 dark:hover:bg-gray-700 transition-colors"
+        >
+          Design
+        </button>
+        <button
+          class="px-4 py-2 rounded-full bg-gray-200 dark:bg-gray-800 text-gray-600 dark:text-gray-300 text-sm font-medium hover:bg-gray-300 dark:hover:bg-gray-700 transition-colors"
+        >
+          Development
+        </button>
+        <button
+          class="px-4 py-2 rounded-full bg-gray-200 dark:bg-gray-800 text-gray-600 dark:text-gray-300 text-sm font-medium hover:bg-gray-300 dark:hover:bg-gray-700 transition-colors"
+        >
+          Lifestyle
+        </button>
+      </div>-->
+
+      <!-- Blog Grid Container -->
+      <div
+        id="posts-container"
+        class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-8 gap-y-12"
+      >
+        <!-- Posts will be injected here via JS -->
+      </div>
+
+      <!-- Pagination -->
+      <div
+        class="mt-20 flex justify-center items-center gap-4"
+        id="pagination-controls"
+      >
+        <!-- Pagination injected via JS -->
+      </div>
+    </main>
+
+    <!-- Footer -->
+    <footer
+      class="border-t border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-950 py-12 transition-colors duration-300"
+    >
+      <div
+        class="max-w-5xl mx-auto px-6 flex flex-col md:flex-row justify-between items-center gap-6"
+      >
+        <div class="text-center md:text-left">
+          <a
+            href="/"
+            class="text-xl font-bold tracking-tight flex items-center justify-center md:justify-start gap-2 mb-2"
+          >
+            <i
+              class="ph-fill ph-asterisk-simple text-indigo-600 dark:text-indigo-400"
+            ></i>
+            <span>Upstream Utopia.</span>
+          </a>
+          <!--<p class="text-sm text-gray-500 dark:text-gray-400">
+            © Upstream. Crafted with duplicity.
+          </p>-->
+        </div>
+
+        <div class="flex gap-6 text-gray-500 dark:text-gray-400">
+          <!--<a
+            href="#"
+            class="hover:text-indigo-600 dark:hover:text-white transition-colors"
+            ><i class="ph ph-twitter-logo text-xl"></i
+          ></a>-->
+          <a
+            href="https://github.com/upstreamplatforms/upstream-blog"
+            class="hover:text-indigo-600 dark:hover:text-white transition-colors"
+            ><i class="ph ph-github-logo text-xl"></i
+          ></a>
+          <!--<a
+            href="#"
+            class="hover:text-indigo-600 dark:hover:text-white transition-colors"
+            ><i class="ph ph-linkedin-logo text-xl"></i
+          ></a>-->
+        </div>
+      </div>
+    </footer>
+
+    <!-- Application Logic -->
+    <script>
+      // --- Mock Data ---
+      // const posts = [
+      //     {
+      //         id: 1,
+      //         title: "The Art of Subtracting",
+      //         excerpt:
+      //             "Why less is often more when it comes to UI design and cognitive load.",
+      //         category: "Design",
+      //         date: "Oct 24, 2023",
+      //         readTime: "5 min",
+      //         image: "linear-gradient(135deg, #e0e7ff 0%, #c7d2fe 100%)",
+      //     },
+      //     {
+      //         id: 2,
+      //         title: "Functional CSS Architecture",
+      //         excerpt:
+      //             "Moving beyond semantic class names to utility-first workflows.",
+      //         category: "Development",
+      //         date: "Oct 20, 2023",
+      //         readTime: "8 min",
+      //         image: "linear-gradient(135deg, #f3e8ff 0%, #e9d5ff 100%)",
+      //     },
+      //     {
+      //         id: 3,
+      //         title: "Digital Minimalism",
+      //         excerpt:
+      //             "Reclaiming your attention span in an economy designed to steal it.",
+      //         category: "Lifestyle",
+      //         date: "Oct 15, 2023",
+      //         readTime: "6 min",
+      //         image: "linear-gradient(135deg, #fee2e2 0%, #fecaca 100%)",
+      //     },
+      //     {
+      //         id: 4,
+      //         title: "The Future of Typography",
+      //         excerpt:
+      //             "Variable fonts and the new era of responsive web typography.",
+      //         category: "Design",
+      //         date: "Oct 12, 2023",
+      //         readTime: "4 min",
+      //         image: "linear-gradient(135deg, #dcfce7 0%, #bbf7d0 100%)",
+      //     },
+      //     {
+      //         id: 5,
+      //         title: "Async State Management",
+      //         excerpt:
+      //             "Handling server state efficiently in modern React applications.",
+      //         category: "Development",
+      //         date: "Oct 08, 2023",
+      //         readTime: "10 min",
+      //         image: "linear-gradient(135deg, #ffedd5 0%, #fed7aa 100%)",
+      //     },
+      //     {
+      //         id: 6,
+      //         title: "Workspace Aesthetics",
+      //         excerpt:
+      //             "How your physical environment affects your coding productivity.",
+      //         category: "Lifestyle",
+      //         date: "Oct 05, 2023",
+      //         readTime: "3 min",
+      //         image: "linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%)",
+      //     },
+      //     {
+      //         id: 7,
+      //         title: "Understanding Color Theory",
+      //         excerpt:
+      //             "The psychological impact of color in branding and product design.",
+      //         category: "Design",
+      //         date: "Sep 28, 2023",
+      //         readTime: "7 min",
+      //         image: "linear-gradient(135deg, #fae8ff 0%, #f5d0fe 100%)",
+      //     },
+      //     {
+      //         id: 8,
+      //         title: "Rust for Web Developers",
+      //         excerpt:
+      //             "Why JavaScript developers are falling in love with Rust.",
+      //         category: "Development",
+      //         date: "Sep 25, 2023",
+      //         readTime: "12 min",
+      //         image: "linear-gradient(135deg, #ccfbf1 0%, #99f6e4 100%)",
+      //     },
+      //     {
+      //         id: 9,
+      //         title: "The Slow Web Movement",
+      //         excerpt:
+      //             "Building sustainable websites that respect the user's resources.",
+      //         category: "Philosophy",
+      //         date: "Sep 20, 2023",
+      //         readTime: "5 min",
+      //         image: "linear-gradient(135deg, #fef9c3 0%, #fde047 100%)",
+      //     },
+      //     {
+      //         id: 10,
+      //         title: "Grid vs Flexbox",
+      //         excerpt:
+      //             "A comprehensive guide on when to use which layout model.",
+      //         category: "Development",
+      //         date: "Sep 15, 2023",
+      //         readTime: "6 min",
+      //         image: "linear-gradient(135deg, #e0f2fe 0%, #bae6fd 100%)",
+      //     },
+      //     {
+      //         id: 11,
+      //         title: "Designing for Dark Mode",
+      //         excerpt:
+      //             "Best practices for implementing comfortable dark themes.",
+      //         category: "Design",
+      //         date: "Sep 10, 2023",
+      //         readTime: "4 min",
+      //         image: "linear-gradient(135deg, #fce7f3 0%, #fbcfe8 100%)",
+      //     },
+      // ];
+
+      var posts = [];
+      // --- State Management ---
+      const state = {
+        currentPage: 1,
+        postsPerPage: 6,
+        theme: localStorage.getItem("theme") || "light",
+      };
+
+      // --- DOM Elements ---
+      const postsContainer = document.getElementById("posts-container");
+      const paginationContainer = document.getElementById(
+        "pagination-controls",
+      );
+      const themeToggleBtn = document.getElementById("theme-toggle");
+      const themeIcon = document.getElementById("theme-icon");
+      const themeToggleBtnMobile = document.getElementById(
+        "theme-toggle-mobile",
+      );
+      const themeIconMobile = document.getElementById("theme-icon-mobile");
+      const signInButton = document.getElementById("signInButton");
+      const signOutButton = document.getElementById("signOutButton");
+      const newPostButton = document.getElementById("newPostButton");
+      // --- Logic ---
+
+      function init() {
+        applyTheme(state.theme);
+        fetch("/posts")
+          .then((response) => {
+            if (response.status == 200) return response.json();
+          })
+          .then((postData) => {
+            posts = postData.reverse();
+            renderPosts();
+            renderPagination();
+          });
+
+        // Event Listeners
+        themeToggleBtn.addEventListener("click", toggleTheme);
+        themeToggleBtnMobile.addEventListener("click", toggleTheme);
+      }
+
+      // Theme Handling
+      function toggleTheme() {
+        state.theme = state.theme === "light" ? "dark" : "light";
+        localStorage.setItem("theme", state.theme);
+        applyTheme(state.theme);
+      }
+
+      function applyTheme(theme) {
+        const html = document.documentElement;
+        const iconClass = theme === "light" ? "ph-moon" : "ph-sun";
+
+        if (theme === "dark") {
+          html.classList.add("dark");
+        } else {
+          html.classList.remove("dark");
+        }
+
+        // Update icons
+        [themeIcon, themeIconMobile].forEach((icon) => {
+          icon.className = `ph ${iconClass} text-xl`;
+        });
+      }
+
+      // USER handling
+      let config = {};
+      let user = undefined;
+      setUser();
+      fetch("/config")
+        .then((response) => {
+          if (response.status == 200) return response.json();
+          else console.error("Could not load app config from server.");
+        })
+        .then((appConfig) => {
+          config = appConfig;
+          console.log(config);
+          firebase.initializeApp({
+            apiKey: config.authApiKey,
+            authDomain: config.authDomain,
+          });
+
+          firebase.auth().onAuthStateChanged((newUser) => {
+            console.log("onAuthStateChanged user:");
+            console.log(newUser);
+            if (newUser) {
+              user = newUser;
+              localStorage.setItem("user_email", user.email);
+              setUser();
+            } else {
+              setUser();
+            }
+          });
+        });
+
+      // login with google function
+      function signInWithGoogle() {
+        var provider = new firebase.auth.GoogleAuthProvider();
+        firebase
+          .auth()
+          .signInWithPopup(provider)
+          .then((result) => {
+            var credential = result.credential;
+            // This gives you a Google Access Token. You can use it to access the Google API.
+            var token = credential.accessToken;
+            // The signed-in user info.
+            var user = result.user;
+          })
+          .catch((error) => {
+            // Handle Errors here.
+            var errorCode = error.code;
+            var errorMessage = error.message;
+            // The email of the user's account used.
+            var email = error.email;
+            // The firebase.auth.AuthCredential type that was used.
+            var credential = error.credential;
+            console.error(error);
+            // ...
+          });
+      }
+
+      function signOut() {
+        localStorage.removeItem("user_email");
+        firebase
+          .auth()
+          .signOut()
+          .then(function () {
+            window.location.href = "/";
+          });
+      }
+
+      function setUser() {
+        let user_email = localStorage.getItem("user_email");
+        if (user_email) {
+          signOutButton.classList.remove("hidden");
+          signInButton.classList.add("hidden");
+          newPostButton.classList.remove("hidden");
+        } else {
+          signInButton.classList.remove("hidden");
+          signOutButton.classList.add("hidden");
+          newPostButton.classList.add("hidden");
+        }
+      }
+
+      // Post Rendering
+      function renderPosts() {
+        postsContainer.innerHTML = ""; // Clear existing
+
+        const start = (state.currentPage - 1) * state.postsPerPage;
+        const end = start + state.postsPerPage;
+        const paginatedPosts = posts.slice(start, end);
+
+        paginatedPosts.forEach((post, index) => {
+          // Stagger animation delay
+          const delay = index * 100;
+
+          const article = document.createElement("article");
+          article.className =
+            "post-card group flex flex-col h-full opacity-0 animate-fade-in-up";
+          article.style.animation = `fadeInUp 0.6s ease forwards ${delay}ms`;
+
+          // Using a gradient div as a minimalist placeholder instead of an image
+          article.innerHTML = `
+                    <a href="/${post.id}" class="block overflow-hidden rounded-2xl mb-5 relative aspect-[16/10]">
+                        <div class="w-full h-full transition-transform duration-500 group-hover:scale-105"
+                             style="background-image: url(${post.image}); background-size: cover; opacity: 0.8;"></div>
+                        <div class="absolute top-4 left-4 bg-white/90 dark:bg-black/80 backdrop-blur-sm px-3 py-1 rounded-full text-xs font-semibold uppercase tracking-wider text-gray-800 dark:text-gray-200">
+                            ${post.category}
+                        </div>
+                    </a>
+                    <div class="flex-1 flex flex-col">
+                        <div class="flex items-center gap-3 text-xs text-gray-500 dark:text-gray-400 mb-3 font-medium uppercase tracking-wide">
+                            <span>${new Date(post.date * 1000).toDateString()}</span>
+                            <span class="w-1 h-1 rounded-full bg-gray-300 dark:bg-gray-600"></span>
+                            <span>${post.readTime} read</span>
+                        </div>
+                        <h2 class="text-2xl font-bold mb-3 text-gray-900 dark:text-white group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors leading-tight">
+                            <a href="/${post.id}">${post.title}</a>
+                        </h2>
+                        <p class="text-gray-600 dark:text-gray-400 mb-4 line-clamp-2 leading-relaxed flex-grow">
+                            ${post.excerpt}
+                        </p>
+                        <a href="/${post.id}" class="inline-flex items-center gap-2 text-sm font-semibold text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-300 transition-colors mt-auto">
+                            Read Article <i class="ph-bold ph-arrow-right"></i>
+                        </a>
+                    </div>
+                `;
+          postsContainer.appendChild(article);
+        });
+      }
+
+      // Pagination Rendering
+      function renderPagination() {
+        paginationContainer.innerHTML = "";
+        const totalPages = Math.ceil(posts.length / state.postsPerPage);
+
+        // Previous Button
+        const prevBtn = document.createElement("button");
+        prevBtn.innerHTML = `<i class="ph-bold ph-caret-left"></i>`;
+        prevBtn.className = `w-10 h-10 rounded-full flex items-center justify-center transition-colors ${state.currentPage === 1 ? "text-gray-300 cursor-not-allowed dark:text-gray-700" : "hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-600 dark:text-gray-300"}`;
+        prevBtn.disabled = state.currentPage === 1;
+        prevBtn.onclick = () => {
+          if (state.currentPage > 1) {
+            state.currentPage--;
+            updateView();
+          }
+        };
+        paginationContainer.appendChild(prevBtn);
+
+        // Page Numbers
+        for (let i = 1; i <= totalPages; i++) {
+          const pageBtn = document.createElement("button");
+          pageBtn.innerText = i;
+          const isActive = i === state.currentPage;
+          pageBtn.className = `w-10 h-10 rounded-full text-sm font-medium transition-all ${
+            isActive
+              ? "bg-gray-900 text-white dark:bg-white dark:text-gray-900 shadow-md"
+              : "text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800"
+          }`;
+          pageBtn.onclick = () => {
+            state.currentPage = i;
+            updateView();
+          };
+          paginationContainer.appendChild(pageBtn);
+        }
+
+        // Next Button
+        const nextBtn = document.createElement("button");
+        nextBtn.innerHTML = `<i class="ph-bold ph-caret-right"></i>`;
+        nextBtn.className = `w-10 h-10 rounded-full flex items-center justify-center transition-colors ${state.currentPage === totalPages ? "text-gray-300 cursor-not-allowed dark:text-gray-700" : "hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-600 dark:text-gray-300"}`;
+        nextBtn.disabled = state.currentPage === totalPages;
+        nextBtn.onclick = () => {
+          if (state.currentPage < totalPages) {
+            state.currentPage++;
+            updateView();
+          }
+        };
+        paginationContainer.appendChild(nextBtn);
+      }
+
+      function updateView() {
+        renderPosts();
+        renderPagination();
+        // Smooth scroll to top of posts
+        window.scrollTo({
+          top: document.querySelector("header").offsetHeight,
+          behavior: "smooth",
+        });
+      }
+
+      // Add custom animation styles dynamically
+      const styleSheet = document.createElement("style");
+      styleSheet.innerText = `
+            @keyframes fadeInUp {
+                from {
+                    opacity: 0;
+                    transform: translateY(20px);
+                }
+                to {
+                    opacity: 1;
+                    transform: translateY(0);
+                }
+            }
+        `;
+      document.head.appendChild(styleSheet);
+
+      // Run
+      document.addEventListener("DOMContentLoaded", init);
+    </script>
+  </body>
+</html>
