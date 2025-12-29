@@ -30,5 +30,11 @@ type Post struct {
 	ReadTime string   `json:"readTime"`
 	Image    string   `json:"image"`
 	Tags     []string `json:"tags"`
+	Page     int      `json:"page"`
 	Content  string   `json:"content"`
+}
+
+type User struct {
+	Email string   `json:"email"`
+	Roles []string `json:"roles"`
 }

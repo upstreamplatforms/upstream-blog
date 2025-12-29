@@ -1,0 +1,40 @@
+apiVersion: serving.knative.dev/v1
+kind: Service
+metadata:
+  name: upstream-blog
+  annotations:
+    run.googleapis.com/maxScale: "1"
+spec:
+  template:
+    metadata:
+      annotations:
+        run.googleapis.com/execution-environment: gen2
+        run.googleapis.com/startup-cpu-boost: "true"
+    spec:
+      containers:
+        - image: REGION-docker.pkg.dev/PROJECT_ID/cloud-run-source-deploy/upstream-blog
+          resources:
+            limits:
+              cpu: "1"
+              memory: 512Mi
+          volumeMounts:
+            - name: blogfs
+              mountPath: /mnt/data
+          env:
+            - name: DEPLOY_DATE
+              value: DEPLOY_DATE_
+            - name: GCLOUD_PROJECT
+              value: PROJECT_ID
+            - name: AUTH_API_KEY
+              value: AUTH_API_KEY
+            - name: AUTH_DOMAIN
+              value: AUTH_DOMAIN
+            - name: DATA_DIR
+              value: /mnt/data
+      volumes:
+        - name: blogfs
+          csi:
+            driver: gcsfuse.run.googleapis.com
+            readOnly: False
+            volumeAttributes:
+              bucketName: upstream-blog

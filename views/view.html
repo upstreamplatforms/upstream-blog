@@ -8,7 +8,7 @@
     <!-- Tailwind CSS -->
     <!--<script src="https://cdn.tailwindcss.com"></script>-->
     <script src="/static/tailwind.js"></script>
-
+    <script src="https://www.gstatic.com/firebasejs/8.0/firebase.js"></script>
     <!-- Tailwind Config for Dark Mode -->
     <script>
       tailwind.config = {
@@ -30,6 +30,9 @@
         },
       };
     </script>
+
+    <link href="/static/highlight-atom-one-dark.css" rel="stylesheet" />
+    <script src="/static/highlight.js"></script>
 
     <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -75,6 +78,35 @@
       .dark ::-webkit-scrollbar-thumb {
         background: #475569;
       }
+
+      p {
+        min-height: 12px;
+      }
+
+      blockquote {
+        font-style: italic;
+        border-left: 10px solid rgb(165 180 252);
+        margin: 8px 30px !important;
+        padding: 10px 26px;
+        quotes: "\201C" "\201D" "\2018" "\2019";
+      }
+      blockquote:before {
+        color: rebeccapurple;
+        /*content: open-quote;*/
+        font-size: 4em;
+        line-height: 0.1em;
+        margin-right: 0.25em;
+        vertical-align: -0.4em;
+      }
+      blockquote p {
+        display: inline;
+      }
+
+      h2 {
+        font-size: 1.7em !important;
+        padding-top: 6px;
+        padding-bottom: 14px;
+      }
     </style>
   </head>
   <body
@@ -113,21 +145,12 @@
         <div
           class="hidden md:flex items-center gap-8 text-sm font-medium text-gray-600 dark:text-gray-400"
         >
-          <!--<a
-            href="#"
-            class="hover:text-indigo-600 dark:hover:text-white transition-colors"
-            >Journal</a
-          >
           <a
-            href="#"
-            class="hover:text-indigo-600 dark:hover:text-white transition-colors"
-            >About</a
+            id="editButton"
+            onclick="editButtonClick()"
+            class="hover:text-indigo-600 dark:hover:text-white transition-colors cursor-pointer hidden"
+            >Edit</a
           >
-          <a
-            href="#"
-            class="hover:text-indigo-600 dark:hover:text-white transition-colors"
-            >Newsletter</a
-          >-->
 
           <div class="w-px h-4 bg-gray-300 dark:bg-gray-700 mx-2"></div>
 
@@ -160,7 +183,7 @@
     <main class="flex-grow w-full max-w-5xl mx-auto px-6 py-8">
       <!-- Include stylesheet -->
       <center><h1 class="text-4xl" id="postTitle"></h1></center>
-      <div class="mt-8" id="postContent"></div>
+      <div class="mt-8 text-wrap" id="postContent"></div>
 
       <script>
         const postTitle = document.getElementById("postTitle");
@@ -174,6 +197,7 @@
           .then((post) => {
             postTitle.innerText = post.title;
             postContent.innerHTML = post.content;
+            hljs.highlightAll();
           });
       </script>
     </main>
@@ -224,12 +248,11 @@
     <script>
       // --- State Management ---
       const state = {
-        currentPage: 1,
-        postsPerPage: 6,
         theme: localStorage.getItem("theme") || "light",
       };
 
       // --- DOM Elements ---
+      const editButton = document.getElementById("editButton");
       const themeToggleBtn = document.getElementById("theme-toggle");
       const themeIcon = document.getElementById("theme-icon");
       const themeToggleBtnMobile = document.getElementById(
@@ -238,7 +261,6 @@
       const themeIconMobile = document.getElementById("theme-icon-mobile");
 
       // --- Logic ---
-
       function init() {
         applyTheme(state.theme);
 
@@ -252,6 +274,10 @@
         state.theme = state.theme === "light" ? "dark" : "light";
         localStorage.setItem("theme", state.theme);
         applyTheme(state.theme);
+      }
+
+      function editButtonClick() {
+        window.location.href = "/edit?id=" + postId;
       }
 
       function applyTheme(theme) {
@@ -269,6 +295,46 @@
           icon.className = `ph ${iconClass} text-xl`;
         });
       }
+
+      // USER handling
+      let config = {};
+      let user = undefined;
+      fetch("/config")
+        .then((response) => {
+          if (response.status == 200) return response.json();
+          else console.error("Could not load app config from server.");
+        })
+        .then((appConfig) => {
+          config = appConfig;
+          console.log(config);
+          firebase.initializeApp({
+            apiKey: config.authApiKey,
+            authDomain: config.authDomain,
+          });
+
+          firebase.auth().onAuthStateChanged((newUser) => {
+            console.log("onAuthStateChanged user:");
+            console.log(newUser);
+            if (newUser) {
+              user = newUser;
+              localStorage.setItem("user_email", user.email);
+
+              // check role
+              fetch("/users/" + user.email)
+                .then((response) => {
+                  return response.json();
+                })
+                .then((userData) => {
+                  if (userData && userData.roles && userData.roles.length > 0) {
+                    if (userData.roles.includes("Editor"))
+                      editButton.classList.remove("hidden");
+                  }
+                });
+            } else {
+              // window.location.href = "/";
+            }
+          });
+        });
 
       // Run
       document.addEventListener("DOMContentLoaded", init);

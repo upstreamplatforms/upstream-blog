@@ -13,15 +13,24 @@ import (
 	"strings"
 	"syscall"
 	"time"
+
+	"github.com/MicahParks/keyfunc/v3"
+	"github.com/golang-jwt/jwt/v5"
 )
 
 var siteConfig Config
 var index Index
-var viewIndex = ""
-var viewNew = ""
-var viewView = ""
+var viewIndex []byte
+var viewNew []byte
+var viewView []byte
 var staticCache map[string]string = make(map[string]string)
+var postCache map[string][]byte = make(map[string][]byte)
 var dataDir = "./data"
+var editorsList []string
+var jwtCerts = ""
+var projectId = ""
+var monthViewsName = time.Now().Format("200601") + ".json"
+var monthViews map[string][]int64
 
 func main() {
 
@@ -34,15 +43,16 @@ func main() {
 		switch sig {
 		case os.Interrupt:
 			fmt.Println("Interrupt received, persisting index and closing.")
-			//content.Finalize()
+			b, _ := json.MarshalIndent(monthViews, "", " ")
+			os.WriteFile(dataDir+"/analytics/"+monthViewsName, b, 0644)
 			os.Exit(1)
 		case syscall.SIGKILL:
 			fmt.Println("SIGINT received, persisting index and closing.")
-			//content.Finalize()
 			os.Exit(1)
 		case syscall.SIGTERM:
 			fmt.Println("SIGTERM received, persisting index and closing.")
-			//content.Finalize()
+			b, _ := json.MarshalIndent(monthViews, "", " ")
+			os.WriteFile(dataDir+"/analytics/"+monthViewsName, b, 0644)
 			os.Exit(1)
 		}
 	}()
@@ -50,7 +60,7 @@ func main() {
 	mux := http.NewServeMux()
 
 	mux.HandleFunc("GET /", func(w http.ResponseWriter, r *http.Request) {
-		fmt.Fprint(w, viewIndex)
+		w.Write(viewIndex)
 	})
 
 	mux.HandleFunc("GET /config", func(w http.ResponseWriter, r *http.Request) {
@@ -62,8 +72,21 @@ func main() {
 		fmt.Fprint(w, string(b))
 	})
 
+	mux.HandleFunc("GET /users/{email}", func(w http.ResponseWriter, r *http.Request) {
+		email := r.PathValue("email")
+		isEditor := slices.Contains(editorsList, email)
+		userData := User{Email: email, Roles: []string{"Reader"}}
+
+		if isEditor {
+			userData.Roles = append(userData.Roles, "Editor")
+		}
+
+		b, _ := json.MarshalIndent(userData, "", " ")
+		fmt.Fprint(w, string(b))
+	})
+
 	mux.HandleFunc("GET /new", func(w http.ResponseWriter, r *http.Request) {
-		fmt.Fprint(w, viewNew)
+		w.Write(viewNew)
 	})
 
 	mux.HandleFunc("GET /rss", func(w http.ResponseWriter, r *http.Request) {
@@ -131,64 +154,102 @@ func main() {
 	})
 
 	mux.HandleFunc("GET /{id}", func(w http.ResponseWriter, r *http.Request) {
-		fmt.Fprint(w, viewView)
+		if strings.HasPrefix(r.URL.Path, "/20") {
+			w.Write(viewView)
+		} else {
+			w.WriteHeader(http.StatusNotFound)
+		}
+	})
+
+	mux.HandleFunc("GET /edit", func(w http.ResponseWriter, r *http.Request) {
+		w.Write(viewNew)
 	})
 
 	mux.HandleFunc("GET /posts/{id}", func(w http.ResponseWriter, r *http.Request) {
 		id := r.PathValue("id")
-		b, err := os.ReadFile(dataDir + "/posts/" + id + ".json")
-		if err == nil {
-			val := string(b)
-			fmt.Fprint(w, val)
+		b, ok := postCache[id]
+		if !ok {
+			b, _ = os.ReadFile(dataDir + "/posts/" + id + ".json")
+			if b != nil {
+				postCache[id] = b
+			}
+		}
+
+		if b != nil {
+			w.Write(b)
+
+			analyticsData, ok := monthViews[id]
+			if ok {
+				analyticsData = append(analyticsData, time.Now().Unix())
+				monthViews[id] = analyticsData
+			} else {
+				monthViews[id] = []int64{time.Now().Unix()}
+			}
+		} else {
+			w.WriteHeader(http.StatusNotFound)
 		}
 	})
 
 	mux.HandleFunc("POST /posts", func(w http.ResponseWriter, r *http.Request) {
 		// validate id token
+		idToken := r.Header["Authorization"][0]
+		idToken = idToken[7:]
+
+		k, jwksErr := keyfunc.NewJWKSetJSON(json.RawMessage(jwtCerts))
+		if jwksErr != nil {
+			fmt.Println(jwksErr.Error())
+		}
+		token, _ := jwt.Parse(idToken, k.Keyfunc, jwt.WithValidMethods([]string{jwt.SigningMethodRS256.Alg()}))
+		email := ""
+		iss := ""
+		if claims, ok := token.Claims.(jwt.MapClaims); ok {
+			email = claims["email"].(string)
+			iss = claims["iss"].(string)
+		}
+		isEditor := slices.Contains(editorsList, email)
+		isProject := strings.HasSuffix(iss, "/"+projectId)
+		if !isEditor || !isProject {
+			w.WriteHeader(http.StatusUnauthorized)
+			fmt.Fprint(w, "Not authorized.")
+			return
+		}
+
+		// download an image file
+		imageResponse, _ := http.Get("https://picsum.photos/200/200")
+		var fileName string
+		if imageResponse != nil {
+			fileName = RandomString(5)
+			imageFile, _ := os.Create(dataDir + "/images/" + fileName + ".jpg")
+			defer imageResponse.Body.Close()
+			io.Copy(imageFile, imageResponse.Body)
+		}
 
 		var newContent []byte
-		// contentType := r.Header.Get("Content-Type")
-
-		// if strings.HasPrefix(contentType, "multipart/form-data") {
-		// 	var files []multipart.FileHeader
-		// 	form, _ := r.Form()
-		// 	if form != nil && form.File != nil && form.File["files"] != nil {
-		// 		for _, file := range form.File["files"] {
-		// 			files = append(files, *file)
-		// 		}
-		// 	}
-		// 	var inputMap map[string]string = make(map[string]string)
-		// 	for key, value := range r.PostForm {
-		// 		fmt.Printf("%v = %v \n", key, value)
-		// 		inputMap[key] = value[0]
-		// 	}
-		// 	newContent, _ = json.MarshalIndent(inputMap, "", "  ")
-		// } else {
 		var err error
 		newContent, err = io.ReadAll(r.Body)
 		if err != nil {
 			log.Println(err.Error())
 		}
-		//}
 
 		var newPost Post
 		json.Unmarshal(newContent, &newPost)
 		lastIdPiece := strings.ReplaceAll(strings.ToLower(newPost.Title), " ", "-")
+		lastIdPiece = strings.ReplaceAll(lastIdPiece, "\"", "")
 		if len(lastIdPiece) > 27 {
 			lastIdPiece = lastIdPiece[0:27]
 		}
 		newPost.Id = time.Now().Format("20060102-150405-") + lastIdPiece
 		newPost.Date = time.Now().Unix()
+		newPost.Page = siteConfig.IndexCount
 		if newPost.Category == "" {
 			newPost.Category = "General"
 		}
-		newPost.ReadTime = "4 min"
-		// if len(newPost.Content) > 40 {
-		// 	newPost.Excerpt = newPost.Content[:40]
-		// } else {
-		// 	newPost.Excerpt = newPost.Content
-		// }
-		newPost.Image = "https://picsum.photos/200/300" // "linear-gradient(135deg, #fce7f3 0%, #fbcfe8 100%)"
+
+		wordCount := strings.Split(newPost.Content, " ")
+		readMinutes := len(wordCount) / 200
+		readMinutes = max(1, readMinutes)
+		newPost.ReadTime = strconv.Itoa(readMinutes) + " min"
+		newPost.Image = "/images/" + fileName + ".jpg" // "https://picsum.photos/200/300" // "linear-gradient(135deg, #fce7f3 0%, #fbcfe8 100%)"
 		postBytes, _ := json.MarshalIndent(newPost, "", "  ")
 		os.WriteFile(dataDir+"/posts/"+newPost.Id+".json", postBytes, 0644)
 
@@ -202,15 +263,60 @@ func main() {
 			previousIndex.Posts = append(previousIndex.Posts, index.Posts[0:siteConfig.IndexSize]...)
 			b, _ := json.MarshalIndent(previousIndex, "", " ")
 			os.WriteFile(dataDir+"/index_"+strconv.Itoa(siteConfig.IndexCount)+".json", b, 0644)
-			// newPostsIndex := make([]PostMeta, 0, siteConfig.IndexSize*2)
-			// newPostsIndex = append(newPostsIndex, index.Posts[siteConfig.IndexSize+1:]...)
 			index.Posts = slices.Delete(index.Posts, 0, siteConfig.IndexSize)
 			siteConfig.IndexCount++
+
 			b, _ = json.MarshalIndent(siteConfig, "", " ")
 			os.WriteFile(dataDir+"/config.json", b, 0644)
 		}
 
 		go persistIndex()
+
+		w.WriteHeader(http.StatusCreated)
+		fmt.Fprint(w, "OK")
+	})
+
+	mux.HandleFunc("PUT /posts/{id}", func(w http.ResponseWriter, r *http.Request) {
+		// validate id token
+		idToken := r.Header["Authorization"][0]
+		idToken = idToken[7:]
+
+		k, jwksErr := keyfunc.NewJWKSetJSON(json.RawMessage(jwtCerts))
+		if jwksErr != nil {
+			fmt.Println(jwksErr.Error())
+		}
+		token, _ := jwt.Parse(idToken, k.Keyfunc, jwt.WithValidMethods([]string{jwt.SigningMethodRS256.Alg()}))
+		email := ""
+		iss := ""
+		if claims, ok := token.Claims.(jwt.MapClaims); ok {
+			email = claims["email"].(string)
+			iss = claims["iss"].(string)
+		}
+		isEditor := slices.Contains(editorsList, email)
+		isProject := strings.HasSuffix(iss, "/"+projectId)
+		if !isEditor || !isProject {
+			w.WriteHeader(http.StatusUnauthorized)
+			fmt.Fprint(w, "Not authorized.")
+			return
+		}
+
+		var newContent []byte
+		var err error
+		newContent, err = io.ReadAll(r.Body)
+		if err != nil {
+			log.Println(err.Error())
+		}
+
+		var newPost Post
+		json.Unmarshal(newContent, &newPost)
+
+		wordCount := strings.Split(newPost.Content, " ")
+		readMinutes := len(wordCount) / 200
+		readMinutes = max(1, readMinutes)
+		newPost.ReadTime = strconv.Itoa(readMinutes) + " min"
+		postBytes, _ := json.MarshalIndent(newPost, "", "  ")
+		os.WriteFile(dataDir+"/posts/"+newPost.Id+".json", postBytes, 0644)
+		postCache[newPost.Id] = postBytes
 
 		fmt.Fprint(w, "OK")
 	})
@@ -234,17 +340,31 @@ func main() {
 		fmt.Fprint(w, string(b))
 	})
 
+	mux.HandleFunc("GET /images/{name}", func(w http.ResponseWriter, r *http.Request) {
+		name := r.PathValue("name")
+		b, err := os.ReadFile(dataDir + "/images/" + name)
+		if err == nil {
+			w.Header().Set("Content-Type", "image/jpg")
+			w.WriteHeader(http.StatusOK)
+			w.Write(b)
+		}
+	})
+
 	log.Print("Listening...")
 
 	http.ListenAndServe(":8080", mux)
 }
 
 func Init() {
+	start := time.Now()
+
 	tempDataDir := os.Getenv("DATA_DIR")
 	if tempDataDir != "" {
 		dataDir = tempDataDir
 	}
 	os.MkdirAll(dataDir+"/posts", os.ModePerm)
+	os.MkdirAll(dataDir+"/images", os.ModePerm)
+	os.MkdirAll(dataDir+"/analytics", os.ModePerm)
 
 	// load config
 	b, err := os.ReadFile(dataDir + "/config.json")
@@ -267,20 +387,51 @@ func Init() {
 		json.Unmarshal(b, &index)
 	}
 
+	// load viewer data
+	b, err = os.ReadFile(dataDir + "/analytics/" + monthViewsName)
+	if err == nil {
+		json.Unmarshal(b, &monthViews)
+	} else {
+		monthViews = make(map[string][]int64)
+	}
+
 	// load views
 	b, err = os.ReadFile("./views/index.html")
 	if err == nil {
-		viewIndex = string(b)
+		viewIndex = b
 	}
 
 	b, err = os.ReadFile("./views/new.html")
 	if err == nil {
-		viewNew = string(b)
+		viewNew = b
 	}
 
 	b, err = os.ReadFile("./views/view.html")
 	if err == nil {
-		viewView = string(b)
+		viewView = b
+	}
+
+	// load project
+	projectId = os.Getenv("GCLOUD_PROJECT")
+
+	// load editors
+	editors := os.Getenv("EDITORS")
+	editorsList = strings.Split(editors, ",")
+
+	elapsed := time.Since(start)
+	log.Printf("Init took %s", elapsed)
+
+	// load certs
+	go loadCerts()
+}
+
+func loadCerts() {
+	certResponse, _ := http.Get("https://www.googleapis.com/oauth2/v3/certs")
+	if certResponse != nil {
+		body, _ := io.ReadAll(certResponse.Body)
+		if body != nil {
+			jwtCerts = string(body)
+		}
 	}
 }
 

@@ -185,7 +185,7 @@
       <header class="mb-20 text-center max-w-2xl mx-auto">
         <span
           class="text-indigo-600 dark:text-indigo-400 font-medium tracking-wider text-sm uppercase mb-4 block"
-          >One Day at a Time</span
+          >Tech And Our World</span
         >
         <h1
           class="text-4xl md:text-6xl font-bold mb-6 leading-tight text-gray-900 dark:text-white"
@@ -269,11 +269,14 @@
             class="hover:text-indigo-600 dark:hover:text-white transition-colors"
             ><i class="ph ph-twitter-logo text-xl"></i
           ></a>-->
-          <a
+
+          <img width="100px" src="/static/human.png" />
+
+          <!--<a
             href="https://github.com/upstreamplatforms/upstream-blog"
             class="hover:text-indigo-600 dark:hover:text-white transition-colors"
             ><i class="ph ph-github-logo text-xl"></i
-          ></a>
+          ></a>-->
           <!--<a
             href="#"
             class="hover:text-indigo-600 dark:hover:text-white transition-colors"
@@ -488,6 +491,7 @@
               localStorage.setItem("user_email", user.email);
               setUser();
             } else {
+              localStorage.removeItem("user_email");
               setUser();
             }
           });
@@ -534,7 +538,18 @@
         if (user_email) {
           signOutButton.classList.remove("hidden");
           signInButton.classList.add("hidden");
-          newPostButton.classList.remove("hidden");
+
+          // check role
+          fetch("/users/" + user_email)
+            .then((response) => {
+              return response.json();
+            })
+            .then((userData) => {
+              if (userData && userData.roles && userData.roles.length > 0) {
+                if (userData.roles.includes("Editor"))
+                  newPostButton.classList.remove("hidden");
+              }
+            });
         } else {
           signInButton.classList.remove("hidden");
           signOutButton.classList.add("hidden");

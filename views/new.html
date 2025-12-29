@@ -39,7 +39,7 @@
             href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Playfair+Display:ital,wght@0,600;1,600&display=swap"
             rel="stylesheet"
         />
-
+        <script src="https://www.gstatic.com/firebasejs/8.0/firebase.js"></script>
         <!-- Phosphor Icons -->
         <script src="https://unpkg.com/@phosphor-icons/web"></script>
 
@@ -75,6 +75,10 @@
             }
             .dark ::-webkit-scrollbar-thumb {
                 background: #475569;
+            }
+
+            .ql-ui {
+              background-color: black;
             }
         </style>
     </head>
@@ -173,7 +177,7 @@
               </div>
 
               <link href="/static/quill.css" rel="stylesheet" />
-
+              <link href="/static/highlight-atom-one-dark.css" rel="stylesheet">
               <!-- Create the editor container -->
               <div id="editor" class="min-h-[100px] focus:ring-2 focus:ring-indigo-500">
               </div>
@@ -185,6 +189,7 @@
             </div>
 
             <!-- Include the Quill library -->
+            <script src="/static/highlight.js"></script>
             <script src="/static/quill.js"></script>
             <!--<script src="https://cdn.jsdelivr.net/npm/quill@2.0.3/dist/quill.js"></script>-->
 
@@ -192,37 +197,135 @@
             <script>
                 const titleInput = document.getElementById("titleInput");
                 const categoryInput = document.getElementById("categoryInput");
+                let postData;
+
+                const toolbarOptions = [
+                  ['bold', 'italic', 'underline', 'strike'],        // toggled buttons
+                  ['blockquote', 'code-block'],
+                  ['link', 'image', 'video', 'formula'],
+
+                  [{ 'header': 1 }, { 'header': 2 }],               // custom button values
+                  [{ 'list': 'ordered'}, { 'list': 'bullet' }, { 'list': 'check' }],
+                  [{ 'script': 'sub'}, { 'script': 'super' }],      // superscript/subscript
+                  [{ 'indent': '-1'}, { 'indent': '+1' }],          // outdent/indent
+                  [{ 'direction': 'rtl' }],                         // text direction
+
+                  [{ 'size': ['small', false, 'large', 'huge'] }],  // custom dropdown
+                  [{ 'header': [1, 2, 3, 4, 5, 6, false] }],
+
+                  [{ 'color': [] }, { 'background': [] }],          // dropdown with defaults from theme
+                  [{ 'font': [] }],
+                  [{ 'align': [] }],
+
+                  ['clean']                                     // remove formatting button
+                ];
+
                 const quill = new Quill("#editor", {
+                    modules: {
+                      syntax: true,              // Include syntax module
+                      toolbar: toolbarOptions  // Include button in toolbar
+                    },
                     theme: "snow",
                 });
 
-                let draftContent = localStorage.getItem("content_draft");
-                if (draftContent) {
-                  quill.setContents(quill.clipboard.convert({html:draftContent}), 'silent')
+                const urlParams = new URLSearchParams(window.location.search);
+                let id = urlParams.get("id");
+
+                if (id) {
+                  fetch("/posts/" + id).then((response) => {
+                    if (response.status == 200) return response.json();
+                  }).then((responseJson) => {
+                    postData = responseJson;
+                    quill.setContents(quill.clipboard.convert({html:postData.content}), 'silent');
+                    titleInput.value = postData.title;
+                    categoryInput.value = postData.category;
+                  });
+                } else {
+                  let draftContent = localStorage.getItem("content_draft");
+                  if (draftContent) {
+                    quill.setContents(quill.clipboard.convert({html:draftContent}), 'silent')
+                  }
                 }
 
-                function submit() {
+                // USER handling
+                let config = {};
+                let user = undefined;
+                fetch("/config")
+                  .then((response) => {
+                    if (response.status == 200) return response.json();
+                    else console.error("Could not load app config from server.");
+                  })
+                  .then((appConfig) => {
+                    config = appConfig;
+                    console.log(config);
+                    firebase.initializeApp({
+                      apiKey: config.authApiKey,
+                      authDomain: config.authDomain,
+                    });
 
-                    let postContent = quill.getSemanticHTML();
+                    firebase.auth().onAuthStateChanged((newUser) => {
+                      console.log("onAuthStateChanged user:");
+                      console.log(newUser);
+                      if (newUser) {
+                        user = newUser;
+                        localStorage.setItem("user_email", user.email);
+                      } else {
+                        window.location.href = "/";
+                      }
+                    });
+                  });
+
+
+                async function submit() {
+                    let postContent = quill.getSemanticHTML().replaceAll("&nbsp;", " ");
                     let tmp = document.createElement('div');
                     tmp.innerHTML = postContent;
                     let excerpt = tmp.textContent || tmp.innerText || '';
                     if (excerpt.length > 180) excerpt = excerpt.substring(0, 180);
                     excerpt += "...";
 
-                    localStorage.removeItem("content_draft");
+                    firebase.auth().currentUser.getIdToken(true).then(function(idToken) {
+                      if (!postData) {
+                        fetch("/posts", {
+                          method: "POST",
+                          headers: {
+                            "Authorization": `Bearer ${idToken}`
+                          },
+                          body: JSON.stringify({
+                            title: titleInput.value,
+                            category: categoryInput.value,
+                            excerpt: excerpt,
+                            tags: [],
+                            content: postContent
+                          })
+                        }).then((response) => {
+                          if (response.status != 201) {
+                            alert("Post could not be created, maybe you are not authorized?");
+                          } else {
+                            localStorage.removeItem("content_draft");
+                          }
+                          window.location.href = "/";
+                        });
+                      } else {
+                        postData.title = titleInput.value;
+                        postData.category = categoryInput.value;
+                        postData.content = postContent;
 
-                    fetch("/posts", {
-                      method: "POST",
-                      body: JSON.stringify({
-                        title: titleInput.value,
-                        category: categoryInput.value,
-                        excerpt: excerpt,
-                        tags: [],
-                        content: quill.getSemanticHTML()
-                      })
-                    }).then(() => {
-                      window.location.href = "/";
+                        fetch("/posts/" + postData.id, {
+                          method: "PUT",
+                          headers: {
+                            "Authorization": `Bearer ${idToken}`
+                          },
+                          body: JSON.stringify(postData)
+                        }).then((response) => {
+                          if (response.status != 200) {
+                            alert("Post could not be updated, maybe you are not authorized?");
+                          }
+                          window.location.href = "/";
+                        });
+                      }
+                    }).catch(function(error) {
+                      alert(error);
                     });
                 }
 
@@ -233,7 +336,7 @@
                 });
 
                 function saveDraft() {
-                  let content = quill.getSemanticHTML();
+                  let content = quill.getSemanticHTML().replaceAll("&nbsp;", " ");
                   localStorage.setItem("content_draft", content);
                 }
             </script>
