@@ -233,8 +233,9 @@ func main() {
 
 		var newPost Post
 		json.Unmarshal(newContent, &newPost)
-		lastIdPiece := strings.ReplaceAll(strings.ToLower(newPost.Title), " ", "-")
+		lastIdPiece := strings.ReplaceAll(strings.ReplaceAll(strings.ToLower(newPost.Title), "&", "and"), "?", "")
 		lastIdPiece = strings.ReplaceAll(lastIdPiece, "\"", "")
+		lastIdPiece = strings.ReplaceAll(lastIdPiece, " ", "-")
 		if len(lastIdPiece) > 27 {
 			lastIdPiece = lastIdPiece[0:27]
 		}
