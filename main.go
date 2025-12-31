@@ -96,7 +96,7 @@ func main() {
 		sb.WriteString("  <channel>\n")
 		sb.WriteString("    <title>Upstream Utopia</title>\n")
 		sb.WriteString("    <link>https://upstreamutopia.com</link>\n")
-		sb.WriteString("    <description>To Deepen Understanding</description>\n")
+		sb.WriteString("    <description>Exploring Ideas and Technology</description>\n")
 
 		postIndex := len(index.Posts) - 1
 		if postIndex >= 0 {
@@ -105,7 +105,7 @@ func main() {
 
 				sb.WriteString("    <item>\n")
 				sb.WriteString("      <title>")
-				sb.WriteString(index.Posts[postIndex].Title)
+				sb.WriteString(strings.ReplaceAll(strings.ReplaceAll(index.Posts[postIndex].Title, "&", "and"), "?", ""))
 				sb.WriteString("</title>\n")
 				sb.WriteString("      <link>https://upstreamutopia.com/")
 				sb.WriteString(index.Posts[postIndex].Id)
