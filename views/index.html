@@ -120,7 +120,7 @@
 
           <a
             id="newPostButton"
-            href="/new"
+            href="/edit"
             class="hover:text-indigo-600 dark:hover:text-white transition-colors cursor-pointer hidden"
             >Post</a
           >
@@ -400,6 +400,7 @@
       //     },
       // ];
 
+      const baseUrl = "https://upstream-blog-541397649480.us-east1.run.app";
       var posts = [];
       // --- State Management ---
       const state = {
@@ -426,7 +427,7 @@
 
       function init() {
         applyTheme(state.theme);
-        fetch("/posts")
+        fetch("https://upstream-blog-541397649480.us-east1.run.app/posts")
           .then((response) => {
             if (response.status == 200) return response.json();
           })
@@ -468,7 +469,7 @@
       let config = {};
       let user = undefined;
       setUser();
-      fetch("/config")
+      fetch(baseUrl + "/config")
         .then((response) => {
           if (response.status == 200) return response.json();
           else console.error("Could not load app config from server.");
@@ -538,7 +539,7 @@
           signInButton.classList.add("hidden");
 
           // check role
-          fetch("/users/" + user_email)
+          fetch(baseUrl + "/users/" + user_email)
             .then((response) => {
               return response.json();
             })
@@ -574,9 +575,9 @@
 
           // Using a gradient div as a minimalist placeholder instead of an image
           article.innerHTML = `
-                    <a href="/${post.id}" class="block overflow-hidden rounded-2xl mb-5 relative aspect-[16/10]">
+                    <a href="/posts?id=${post.id}" class="block overflow-hidden rounded-2xl mb-5 relative aspect-[16/10]">
                         <div class="w-full h-full transition-transform duration-500 group-hover:scale-105"
-                             style="background-image: url(${post.image}); background-size: cover; opacity: 0.8;"></div>
+                             style="background-image: url('${"/images/" + post.category.toLowerCase() + ".jpg"}'); background-size: cover; opacity: 0.8;"></div>
                         <div class="absolute top-4 left-4 bg-white/90 dark:bg-black/80 backdrop-blur-sm px-3 py-1 rounded-full text-xs font-semibold uppercase tracking-wider text-gray-800 dark:text-gray-200">
                             ${post.category}
                         </div>
@@ -588,12 +589,12 @@
                             <span>${post.readTime} read</span>
                         </div>
                         <h2 class="text-2xl font-bold mb-3 text-gray-900 dark:text-white group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors leading-tight">
-                            <a href="/${post.id}">${post.title}</a>
+                            <a href="/posts?id=${post.id}">${post.title}</a>
                         </h2>
                         <p class="text-gray-600 dark:text-gray-400 mb-4 line-clamp-2 leading-relaxed flex-grow">
                             ${post.excerpt}
                         </p>
-                        <a href="/${post.id}" class="inline-flex items-center gap-2 text-sm font-semibold text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-300 transition-colors mt-auto">
+                        <a href="/posts?id=${post.id}" class="inline-flex items-center gap-2 text-sm font-semibold text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-300 transition-colors mt-auto">
                             Read Article <i class="ph-bold ph-arrow-right"></i>
                         </a>
                     </div>

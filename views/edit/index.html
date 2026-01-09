@@ -166,6 +166,7 @@
                   <option>General</option>
                   <option>History</option>
                   <option>Tech</option>
+                  <option>Art</option>
                   <option>Society</option>
                   <option>Civilization</option>
                   <option>Nature</option>
@@ -193,6 +194,8 @@
 
             <!-- Initialize Quill editor -->
             <script>
+                const baseUrl = "https://upstream-blog-541397649480.us-east1.run.app";
+
                 const titleInput = document.getElementById("titleInput");
                 const categoryInput = document.getElementById("categoryInput");
                 let postData;
@@ -230,7 +233,7 @@
                 let id = urlParams.get("id");
 
                 if (id) {
-                  fetch("/posts/" + id).then((response) => {
+                  fetch(baseUrl + "/posts/" + id).then((response) => {
                     if (response.status == 200) return response.json();
                   }).then((responseJson) => {
                     postData = responseJson;
@@ -248,7 +251,7 @@
                 // USER handling
                 let config = {};
                 let user = undefined;
-                fetch("/config")
+                fetch(baseUrl + "/config")
                   .then((response) => {
                     if (response.status == 200) return response.json();
                     else console.error("Could not load app config from server.");
@@ -284,7 +287,7 @@
 
                     firebase.auth().currentUser.getIdToken(true).then(function(idToken) {
                       if (!postData) {
-                        fetch("/posts", {
+                        fetch(baseUrl + "/posts", {
                           method: "POST",
                           headers: {
                             "Authorization": `Bearer ${idToken}`
@@ -309,7 +312,7 @@
                         postData.category = categoryInput.value;
                         postData.content = postContent;
 
-                        fetch("/posts/" + postData.id, {
+                        fetch(baseUrl + "/posts/" + postData.id, {
                           method: "PUT",
                           headers: {
                             "Authorization": `Bearer ${idToken}`

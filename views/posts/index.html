@@ -195,11 +195,19 @@
       <div class="mt-8 text-wrap" id="postContent"></div>
 
       <script>
+        const baseUrl = "https://upstream-blog-541397649480.us-east1.run.app";
+
         const postTitle = document.getElementById("postTitle");
         const postContent = document.getElementById("postContent");
-        let postId = window.location.pathname.replace("/", "");
+
+        const urlParams = new URLSearchParams(window.location.search);
+        let postId = urlParams.get("id");
+
+        // let postId = window.location.pathname.substring(
+        //   window.location.pathname.lastIndexOf("/") + 1,
+        // );
         console.log(postId);
-        fetch("/posts/" + postId)
+        fetch(baseUrl + "/posts/" + postId)
           .then((response) => {
             if (response.status == 200) return response.json();
           })
@@ -308,7 +316,7 @@
       // USER handling
       let config = {};
       let user = undefined;
-      fetch("/config")
+      fetch(baseUrl + "/config")
         .then((response) => {
           if (response.status == 200) return response.json();
           else console.error("Could not load app config from server.");
@@ -329,7 +337,7 @@
               localStorage.setItem("user_email", user.email);
 
               // check role
-              fetch("/users/" + user.email)
+              fetch(baseUrl + "/users/" + user.email)
                 .then((response) => {
                   return response.json();
                 })

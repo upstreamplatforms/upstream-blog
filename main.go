@@ -59,11 +59,17 @@ func main() {
 
 	mux := http.NewServeMux()
 
-	mux.HandleFunc("GET /", func(w http.ResponseWriter, r *http.Request) {
-		w.Write(viewIndex)
-	})
+	// mux.HandleFunc("GET /", func(w http.ResponseWriter, r *http.Request) {
+	// 	w.Write(viewIndex)
+	// })
 
 	mux.HandleFunc("GET /config", func(w http.ResponseWriter, r *http.Request) {
+		enableCors(w)
+		if r.Method == http.MethodOptions {
+			w.WriteHeader(http.StatusOK)
+			return
+		}
+
 		config := map[string]string{
 			"authApiKey": os.Getenv("AUTH_API_KEY"),
 			"authDomain": os.Getenv("AUTH_DOMAIN"),
@@ -73,6 +79,12 @@ func main() {
 	})
 
 	mux.HandleFunc("GET /users/{email}", func(w http.ResponseWriter, r *http.Request) {
+		enableCors(w)
+		if r.Method == http.MethodOptions {
+			w.WriteHeader(http.StatusOK)
+			return
+		}
+
 		email := r.PathValue("email")
 		isEditor := slices.Contains(editorsList, email)
 		userData := User{Email: email, Roles: []string{"Reader"}}
@@ -85,9 +97,9 @@ func main() {
 		fmt.Fprint(w, string(b))
 	})
 
-	mux.HandleFunc("GET /new", func(w http.ResponseWriter, r *http.Request) {
-		w.Write(viewNew)
-	})
+	// mux.HandleFunc("GET /new", func(w http.ResponseWriter, r *http.Request) {
+	// 	w.Write(viewNew)
+	// })
 
 	mux.HandleFunc("GET /rss", func(w http.ResponseWriter, r *http.Request) {
 		var sb strings.Builder
@@ -154,6 +166,12 @@ func main() {
 	})
 
 	mux.HandleFunc("GET /{id}", func(w http.ResponseWriter, r *http.Request) {
+		enableCors(w)
+		if r.Method == http.MethodOptions {
+			w.WriteHeader(http.StatusOK)
+			return
+		}
+
 		if strings.HasPrefix(r.URL.Path, "/20") {
 			w.Write(viewView)
 		} else {
@@ -161,11 +179,17 @@ func main() {
 		}
 	})
 
-	mux.HandleFunc("GET /edit", func(w http.ResponseWriter, r *http.Request) {
-		w.Write(viewNew)
-	})
+	// mux.HandleFunc("GET /edit", func(w http.ResponseWriter, r *http.Request) {
+	// 	w.Write(viewNew)
+	// })
 
 	mux.HandleFunc("GET /posts/{id}", func(w http.ResponseWriter, r *http.Request) {
+		enableCors(w)
+		if r.Method == http.MethodOptions {
+			w.WriteHeader(http.StatusOK)
+			return
+		}
+
 		id := r.PathValue("id")
 		b, ok := postCache[id]
 		if !ok {
@@ -191,6 +215,12 @@ func main() {
 	})
 
 	mux.HandleFunc("POST /posts", func(w http.ResponseWriter, r *http.Request) {
+		enableCors(w)
+		if r.Method == http.MethodOptions {
+			w.WriteHeader(http.StatusOK)
+			return
+		}
+
 		// validate id token
 		idToken := r.Header["Authorization"][0]
 		idToken = idToken[7:]
@@ -278,6 +308,12 @@ func main() {
 	})
 
 	mux.HandleFunc("PUT /posts/{id}", func(w http.ResponseWriter, r *http.Request) {
+		enableCors(w)
+		if r.Method == http.MethodOptions {
+			w.WriteHeader(http.StatusOK)
+			return
+		}
+
 		// validate id token
 		idToken := r.Header["Authorization"][0]
 		idToken = idToken[7:]
@@ -323,6 +359,11 @@ func main() {
 	})
 
 	mux.HandleFunc("GET /posts", func(w http.ResponseWriter, r *http.Request) {
+		enableCors(w)
+		if r.Method == http.MethodOptions {
+			w.WriteHeader(http.StatusOK)
+			return
+		}
 		// startIndex := 0
 		// pageSize := 10
 		// params, _ := url.ParseQuery(r.URL.RawQuery)
@@ -342,6 +383,12 @@ func main() {
 	})
 
 	mux.HandleFunc("GET /images/{name}", func(w http.ResponseWriter, r *http.Request) {
+		enableCors(w)
+		if r.Method == http.MethodOptions {
+			w.WriteHeader(http.StatusOK)
+			return
+		}
+
 		name := r.PathValue("name")
 		b, err := os.ReadFile(dataDir + "/images/" + name)
 		if err == nil {
@@ -439,4 +486,10 @@ func loadCerts() {
 func persistIndex() {
 	b, _ := json.MarshalIndent(index, "", " ")
 	os.WriteFile(dataDir+"/index_"+strconv.Itoa(siteConfig.IndexCount)+".json", b, 0644)
+}
+
+func enableCors(w http.ResponseWriter) {
+	w.Header().Set("Access-Control-Allow-Origin", "*")
+	w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
+	w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
 }
