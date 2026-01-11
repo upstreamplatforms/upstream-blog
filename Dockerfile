@@ -6,5 +6,5 @@ FROM alpine:3
 RUN apk add --no-cache ca-certificates
 COPY --from=builder /bin/upstream-blog upstream-blog
 COPY config.json config.json
-COPY views views
+COPY docs docs
 CMD ["/upstream-blog"]

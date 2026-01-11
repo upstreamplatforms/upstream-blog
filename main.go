@@ -59,8 +59,16 @@ func main() {
 
 	mux := http.NewServeMux()
 
-	// mux.HandleFunc("GET /", func(w http.ResponseWriter, r *http.Request) {
-	// 	w.Write(viewIndex)
+	mux.HandleFunc("GET /", func(w http.ResponseWriter, r *http.Request) {
+		w.Write(viewIndex)
+	})
+
+	mux.HandleFunc("GET /edit", func(w http.ResponseWriter, r *http.Request) {
+		w.Write(viewNew)
+	})
+
+	// mux.HandleFunc("GET /new", func(w http.ResponseWriter, r *http.Request) {
+	// 	w.Write(viewNew)
 	// })
 
 	mux.HandleFunc("GET /config", func(w http.ResponseWriter, r *http.Request) {
@@ -97,10 +105,6 @@ func main() {
 		fmt.Fprint(w, string(b))
 	})
 
-	// mux.HandleFunc("GET /new", func(w http.ResponseWriter, r *http.Request) {
-	// 	w.Write(viewNew)
-	// })
-
 	mux.HandleFunc("GET /rss", func(w http.ResponseWriter, r *http.Request) {
 		var sb strings.Builder
 		sb.WriteString("<?xml version=\"1.0\" encoding=\"UTF-8\" ?>\n")
@@ -119,7 +123,7 @@ func main() {
 				sb.WriteString("      <title>")
 				sb.WriteString(strings.ReplaceAll(strings.ReplaceAll(index.Posts[postIndex].Title, "&", "and"), "?", ""))
 				sb.WriteString("</title>\n")
-				sb.WriteString("      <link>https://upstreamutopia.com/")
+				sb.WriteString("      <link>https://upstreamutopia.com/articles?id=")
 				sb.WriteString(index.Posts[postIndex].Id)
 				sb.WriteString("</link>\n")
 				sb.WriteString("      <description>")
@@ -145,7 +149,7 @@ func main() {
 		name := r.PathValue("file")
 		val, ok := staticCache[name]
 		if !ok {
-			b, err := os.ReadFile("./views/static/" + name)
+			b, err := os.ReadFile("./docs/static/" + name)
 			if err == nil {
 				val = string(b)
 				staticCache[name] = val
@@ -165,23 +169,25 @@ func main() {
 		}
 	})
 
-	mux.HandleFunc("GET /{id}", func(w http.ResponseWriter, r *http.Request) {
-		enableCors(w)
-		if r.Method == http.MethodOptions {
-			w.WriteHeader(http.StatusOK)
-			return
-		}
-
-		if strings.HasPrefix(r.URL.Path, "/20") {
-			w.Write(viewView)
+	mux.HandleFunc("GET /images/{file}", func(w http.ResponseWriter, r *http.Request) {
+		name := r.PathValue("file")
+		b, err := os.ReadFile("./docs/images/" + name)
+		if err == nil {
+			w.Header().Set("Content-Type", "image/jpg")
+			w.Write(b)
 		} else {
 			w.WriteHeader(http.StatusNotFound)
 		}
 	})
 
-	// mux.HandleFunc("GET /edit", func(w http.ResponseWriter, r *http.Request) {
-	// 	w.Write(viewNew)
-	// })
+	mux.HandleFunc("GET /articles", func(w http.ResponseWriter, r *http.Request) {
+		enableCors(w)
+		if r.Method == http.MethodOptions {
+			w.WriteHeader(http.StatusOK)
+			return
+		}
+		w.Write(viewView)
+	})
 
 	mux.HandleFunc("GET /posts/{id}", func(w http.ResponseWriter, r *http.Request) {
 		enableCors(w)
@@ -214,9 +220,18 @@ func main() {
 		}
 	})
 
+	mux.HandleFunc("OPTIONS /posts", func(w http.ResponseWriter, r *http.Request) {
+		enableCors(w)
+		if r.Method == http.MethodOptions {
+			w.WriteHeader(http.StatusOK)
+			return
+		}
+	})
+
 	mux.HandleFunc("POST /posts", func(w http.ResponseWriter, r *http.Request) {
 		enableCors(w)
 		if r.Method == http.MethodOptions {
+			log.Println("POST /POSTS OPTIONS 200")
 			w.WriteHeader(http.StatusOK)
 			return
 		}
@@ -227,7 +242,7 @@ func main() {
 
 		k, jwksErr := keyfunc.NewJWKSetJSON(json.RawMessage(jwtCerts))
 		if jwksErr != nil {
-			fmt.Println(jwksErr.Error())
+			log.Println(jwksErr.Error())
 		}
 		token, _ := jwt.Parse(idToken, k.Keyfunc, jwt.WithValidMethods([]string{jwt.SigningMethodRS256.Alg()}))
 		email := ""
@@ -245,14 +260,14 @@ func main() {
 		}
 
 		// download an image file
-		imageResponse, _ := http.Get("https://picsum.photos/200/200")
-		var fileName string
-		if imageResponse != nil {
-			fileName = RandomString(5)
-			imageFile, _ := os.Create(dataDir + "/images/" + fileName + ".jpg")
-			defer imageResponse.Body.Close()
-			io.Copy(imageFile, imageResponse.Body)
-		}
+		// imageResponse, _ := http.Get("https://picsum.photos/200/200")
+		// var fileName string
+		// if imageResponse != nil {
+		// 	fileName = RandomString(5)
+		// 	imageFile, _ := os.Create(dataDir + "/images/" + fileName + ".jpg")
+		// 	defer imageResponse.Body.Close()
+		// 	io.Copy(imageFile, imageResponse.Body)
+		// }
 
 		var newContent []byte
 		var err error
@@ -280,7 +295,7 @@ func main() {
 		readMinutes := len(wordCount) / 200
 		readMinutes = max(1, readMinutes)
 		newPost.ReadTime = strconv.Itoa(readMinutes) + " min"
-		newPost.Image = "/images/" + fileName + ".jpg" // "https://picsum.photos/200/300" // "linear-gradient(135deg, #fce7f3 0%, #fbcfe8 100%)"
+		// newPost.Image = "/images/" + fileName + ".jpg" // "https://picsum.photos/200/300" // "linear-gradient(135deg, #fce7f3 0%, #fbcfe8 100%)"
 		postBytes, _ := json.MarshalIndent(newPost, "", "  ")
 		os.WriteFile(dataDir+"/posts/"+newPost.Id+".json", postBytes, 0644)
 
@@ -305,6 +320,14 @@ func main() {
 
 		w.WriteHeader(http.StatusCreated)
 		fmt.Fprint(w, "OK")
+	})
+
+	mux.HandleFunc("OPTIONS /posts/{id}", func(w http.ResponseWriter, r *http.Request) {
+		enableCors(w)
+		if r.Method == http.MethodOptions {
+			w.WriteHeader(http.StatusOK)
+			return
+		}
 	})
 
 	mux.HandleFunc("PUT /posts/{id}", func(w http.ResponseWriter, r *http.Request) {
@@ -382,21 +405,21 @@ func main() {
 		fmt.Fprint(w, string(b))
 	})
 
-	mux.HandleFunc("GET /images/{name}", func(w http.ResponseWriter, r *http.Request) {
-		enableCors(w)
-		if r.Method == http.MethodOptions {
-			w.WriteHeader(http.StatusOK)
-			return
-		}
+	// mux.HandleFunc("GET /images/{name}", func(w http.ResponseWriter, r *http.Request) {
+	// 	enableCors(w)
+	// 	if r.Method == http.MethodOptions {
+	// 		w.WriteHeader(http.StatusOK)
+	// 		return
+	// 	}
 
-		name := r.PathValue("name")
-		b, err := os.ReadFile(dataDir + "/images/" + name)
-		if err == nil {
-			w.Header().Set("Content-Type", "image/jpg")
-			w.WriteHeader(http.StatusOK)
-			w.Write(b)
-		}
-	})
+	// 	name := r.PathValue("name")
+	// 	b, err := os.ReadFile(dataDir + "/images/" + name)
+	// 	if err == nil {
+	// 		w.Header().Set("Content-Type", "image/jpg")
+	// 		w.WriteHeader(http.StatusOK)
+	// 		w.Write(b)
+	// 	}
+	// })
 
 	log.Print("Listening...")
 
@@ -444,17 +467,17 @@ func Init() {
 	}
 
 	// load views
-	b, err = os.ReadFile("./views/index.html")
+	b, err = os.ReadFile("./docs/index.html")
 	if err == nil {
 		viewIndex = b
 	}
 
-	b, err = os.ReadFile("./views/new.html")
+	b, err = os.ReadFile("./docs/edit/index.html")
 	if err == nil {
 		viewNew = b
 	}
 
-	b, err = os.ReadFile("./views/view.html")
+	b, err = os.ReadFile("./docs/posts/index.html")
 	if err == nil {
 		viewView = b
 	}
