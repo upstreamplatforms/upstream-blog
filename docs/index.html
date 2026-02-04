@@ -472,7 +472,7 @@
 
       function init() {
         applyTheme(state.theme);
-        fetch("https://upstream-blog-541397649480.us-east1.run.app/posts")
+        fetch(baseUrl + "/posts")
           .then((response) => {
             if (response.status == 200) return response.json();
           })

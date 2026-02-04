@@ -127,7 +127,7 @@ func main() {
 				sb.WriteString(index.Posts[postIndex].Id)
 				sb.WriteString("</link>\n")
 				sb.WriteString("      <description>")
-				sb.WriteString(index.Posts[postIndex].Excerpt)
+				sb.WriteString(strings.ReplaceAll(strings.ReplaceAll(index.Posts[postIndex].Excerpt, "&", "and"), "?", ""))
 				sb.WriteString("</description>\n")
 				sb.WriteString("      <pubDate>")
 				sb.WriteString(pubDate.String())
@@ -477,7 +477,7 @@ func Init() {
 		viewNew = b
 	}
 
-	b, err = os.ReadFile("./docs/posts/index.html")
+	b, err = os.ReadFile("./docs/articles/index.html")
 	if err == nil {
 		viewView = b
 	}
